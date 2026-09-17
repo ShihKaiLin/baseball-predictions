@@ -23,7 +23,7 @@ on:
 
 env:
   # UPDATE THIS: Replace with your Streamlit app URL
-  STREAMLIT_APP_URL: 'https://baseball-predictions.streamlit.app/'
+  STREAMLIT_APP_URL: 'https://shihkailin-baseball-predictions.streamlit.app/'
 
 jobs:
   ping-app:
@@ -133,3 +133,4 @@ jobs:
         run: |
           echo "Keep-alive ping completed"
           echo "   Next scheduled run: Check the Actions tab for schedule"
+
