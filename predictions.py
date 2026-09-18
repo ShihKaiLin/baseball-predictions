@@ -164,9 +164,10 @@ def _build_game_recs(
     # come from real per-team runs scored/allowed.
     dist = _coherent_game_distribution(home_full, away_full, hist_stnd)
     # The moneyline shown in the card comes from the coherent distribution
-    # (team stats), not the W% logistic.
-    home_prob = dist.home_moneyline()
-    away_prob = 1.0 - home_prob - dist.tie_probability()
+    # (team stats), not the W% logistic. resolved_moneyline() reallocates
+    # the model's tie mass so home_prob + away_prob == 1.0, matching the
+    # win-probability bar (see home_page() below).
+    home_prob, away_prob = dist.resolved_moneyline()
     recs: dict = {}
 
     if not espn_game:
@@ -471,11 +472,13 @@ def home_page() -> None:
                 (eo for eo in espn_odds if hk in eo.get("home_team", "").lower()), None
             )
             recs = _build_game_recs(g, espn_game, standings, hist_stnd)
-            # v2 engine: win-prob bar uses the same coherent distribution as
-            # the moneyline/run-line/totals cards.
-            home_prob = _coherent_game_distribution(
+            # v2 engine: win-prob bar uses the same coherent distribution,
+            # resolved the same way, as the moneyline/run-line/totals cards
+            # (resolved_moneyline() reallocates tie mass so this matches
+            # the "Est" percentage shown in the Moneyline card exactly).
+            home_prob, _away_prob = _coherent_game_distribution(
                 home_full, away_full, hist_stnd
-            ).home_moneyline()
+            ).resolved_moneyline()
 
             with st.container(border=True):
                 # ── Game header ──

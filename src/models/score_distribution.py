@@ -27,6 +27,29 @@ class ScoreDistribution:
     def tie_probability(self) -> float:
         return float(np.trace(self.matrix))
 
+    def resolved_moneyline(self) -> tuple[float, float]:
+        """Home/away win probabilities with the model's tie mass resolved.
+
+        Real MLB games cannot end tied: a game tied after nine innings goes
+        to extra innings and always produces a winner. ``home_moneyline()``
+        and ``away_moneyline()`` alone leave ``tie_probability()`` unassigned
+        to either side, so they sum to less than 1.0 (often ~10-15% short).
+        Any UI or edge calculation that assumes they sum to 1.0 - e.g.
+        ``away = 1 - home`` - silently misallocates that leftover mass to
+        whichever side it derives second.
+
+        This reallocates the tie mass proportionally between the two sides,
+        so the returned probabilities always sum to 1.0 and both callers
+        (moneyline edge, win-probability bar) agree.
+        """
+        home, away, tie = self.home_moneyline(), self.away_moneyline(), self.tie_probability()
+        if tie <= 0:
+            return home, away
+        denom = home + away
+        if denom <= 0:
+            return 0.5, 0.5
+        return home + tie * (home / denom), away + tie * (away / denom)
+
     def run_line_probabilities(self, home_point: float) -> tuple[float, float, float]:
         away, home = np.indices(self.matrix.shape)
         adjusted = home - away + home_point
