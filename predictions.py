@@ -27,6 +27,7 @@ from page_utils import (
     _prob_bar_html,
     add_betting_oracle_footer,
     init_session_state,
+    team_matches,
 )
 
 # v2 engine: one coherent score distribution per matchup, so moneyline,
@@ -45,10 +46,12 @@ def _team_run_rate(team_full: str, opponent_full: str, hist_stnd: pd.DataFrame) 
     not dominate.  Falls back to league average when data is missing.
     """
     try:
-        last = team_full.split()[-1]
-        team_row = hist_stnd[hist_stnd["team"].str.contains(last, case=False, na=False)]
-        opp_last = opponent_full.split()[-1]
-        opp_row = hist_stnd[hist_stnd["team"].str.contains(opp_last, case=False, na=False)]
+        team_row = hist_stnd[
+            hist_stnd["team"].map(lambda name: team_matches(team_full, name))
+        ]
+        opp_row = hist_stnd[
+            hist_stnd["team"].map(lambda name: team_matches(opponent_full, name))
+        ]
         if not team_row.empty and not opp_row.empty:
             team_row = team_row.sort_values("season").iloc[-1]
             opp_row = opp_row.sort_values("season").iloc[-1]
@@ -138,8 +141,9 @@ def _short(full_name: str) -> str:
 def _get_rs_g(team_full: str, hist_stnd: pd.DataFrame) -> float:
     """Team RS/G from most recent Retrosheet season. Defaults to 4.5."""
     try:
-        last = team_full.split()[-1]
-        sub = hist_stnd[hist_stnd["team"].str.contains(last, case=False, na=False)]
+        sub = hist_stnd[
+            hist_stnd["team"].map(lambda name: team_matches(team_full, name))
+        ]
         if not sub.empty:
             return float(sub.sort_values("season").iloc[-1]["RS_per_G"])
     except Exception:
@@ -404,7 +408,7 @@ def home_page() -> None:
         1
         for g in games_today
         if any(
-            g.get("home_name", "").split()[-1].lower() in eo.get("home_team", "").lower()
+            team_matches(eo.get("home_team", ""), g.get("home_name", ""))
             for eo in espn_odds
         )
     )
@@ -467,9 +471,9 @@ def home_page() -> None:
                 if g.get("away_score") is not None and g.get("home_score") is not None:
                     score_str = f" &nbsp;·&nbsp; **{g['away_score']}–{g['home_score']}**"
 
-            hk = home_full.split()[-1].lower()
             espn_game = next(
-                (eo for eo in espn_odds if hk in eo.get("home_team", "").lower()), None
+                (eo for eo in espn_odds if team_matches(eo.get("home_team", ""), home_full)),
+                None,
             )
             recs = _build_game_recs(g, espn_game, standings, hist_stnd)
             # v2 engine: win-prob bar uses the same coherent distribution,

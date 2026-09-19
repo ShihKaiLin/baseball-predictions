@@ -28,6 +28,7 @@ from page_utils import (
     _load_game_context_cache,
     _load_latest_odds,
     _lookup_ump_retro_id,
+    team_matches,
     add_betting_oracle_footer,
     init_session_state,
     render_sidebar,
@@ -493,8 +494,8 @@ if st.session_state["schedule_selected_game"] is not None:
     _game_espn: dict | None = None
     for _eo in _espn_odds_list:
         if (
-            away_full.split()[-1].lower() in _eo["away_team"].lower()
-            or home_full.split()[-1].lower() in _eo["home_team"].lower()
+            team_matches(_eo["away_team"], away_full)
+            and team_matches(_eo["home_team"], home_full)
         ):
             _game_espn = _eo
             break
@@ -707,9 +708,11 @@ if st.session_state["schedule_selected_game"] is not None:
                     "Showing saved odds data. Set `ODDS_API_KEY` in the .env file "
                     "to enable automatic live fetching."
                 )
-            mask_odds = _odds_csv["home_team"].str.contains(
-                home_full.split()[-1], case=False, na=False
-            ) | _odds_csv["away_team"].str.contains(away_full.split()[-1], case=False, na=False)
+            mask_odds = (
+                _odds_csv["home_team"].map(lambda h: team_matches(h, home_full))
+            ) & (
+                _odds_csv["away_team"].map(lambda a: team_matches(a, away_full))
+            )
             game_odds = _odds_csv[mask_odds].copy()
             if game_odds.empty:
                 st.caption("No multi-book data for this matchup in the saved file.")

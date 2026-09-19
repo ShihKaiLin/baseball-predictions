@@ -126,6 +126,24 @@ READABLE_COLS: dict[str, str] = {
 # ─── Cached API / Data Loaders ────────────────────────────────────────────────
 
 
+def team_matches(candidate: str, target: str) -> bool:
+    """Match two team names without last-word fuzzy collisions.
+
+    ``target`` may be a full name ("Chicago White Sox") or a shorter
+    form ("White Sox", as used in the Retrosheet standings parquet).
+    Exact match wins first; otherwise one name must end with the other
+    as a whole word.  Substring-only overlaps ("Sox" inside "White
+    Sox") never match, so Red Sox and White Sox stay distinct.
+    """
+    a = candidate.strip().casefold()
+    b = target.strip().casefold()
+    if not a or not b:
+        return False
+    if a == b:
+        return True
+    return a.endswith(" " + b) or b.endswith(" " + a)
+
+
 @st.cache_data(show_spinner=False, ttl=3600)
 def _fetch_todays_schedule() -> list[dict]:
     """Fetch today's MLB schedule via the MLB Stats API. Cached 1 hour."""
